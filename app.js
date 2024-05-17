@@ -36,6 +36,10 @@ request.onsuccess = (event) => {
                 addTemplate(db, templateName);
             }
         });
+
+        document.getElementById('load-previous-week').addEventListener('click', () => {
+            chargerSemainePrecedente(db);
+        });
     }
 
     if (document.getElementById('template-list')) {
@@ -510,4 +514,44 @@ function displayNotification(message, type) {
     setTimeout(() => {
         document.body.removeChild(notification);
     }, 3000);
+}
+
+function chargerSemainePrecedente(db) {
+    const transaction = db.transaction(['items'], 'readwrite');
+    const objectStore = transaction.objectStore('items');
+    const request = objectStore.getAll();
+
+    request.onsuccess = (event) => {
+        const items = event.target.result;
+        const currentWeek = getCurrentWeek();
+        const previousWeek = getPreviousWeek(currentWeek);
+
+        const previousWeekItems = items.filter(item => item.week === previousWeek);
+
+        previousWeekItems.forEach(previousItem => {
+            const existingItem = items.find(item => item.name === previousItem.name && item.unit === previousItem.unit && item.week === currentWeek);
+
+            if (existingItem) {
+                existingItem.quantity += previousItem.quantity;
+                objectStore.put(existingItem);
+            } else {
+                const newItem = { ...previousItem, week: currentWeek };
+                delete newItem.id;
+                objectStore.add(newItem);
+            }
+        });
+
+        transaction.oncomplete = () => {
+            afficherItems(db);
+            displayNotification('Semaine précédente chargée avec succès', 'success');
+        };
+
+        transaction.onerror = (event) => {
+            console.error('Erreur lors du chargement de la semaine précédente:', event.target.errorCode);
+        };
+    };
+
+    request.onerror = (event) => {
+        console.error('Erreur lors de la récupération des éléments:', event.target.errorCode);
+    };
 }
