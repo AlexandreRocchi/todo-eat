@@ -31,15 +31,6 @@
 
 3. **Ouvrir le fichier `index.html`** dans votre navigateur pour utiliser l'application en local.
 
-## Utilisation
-
-- **Ajouter un article** : Saisissez le nom, la quantité et l'unité de l'article, puis cliquez sur "Ajouter à la Liste".
-- **Enregistrer un modèle** : Cliquez sur le bouton "Save Template" pour sauvegarder la liste actuelle comme modèle.
-- **Charger une liste précédente** : Utilisez le bouton "Charger la semaine précédente" pour afficher une liste précédemment utilisée.
-- **Accéder aux modèles** : Cliquez sur le bouton "Templates" pour voir et utiliser des listes préenregistrées.
-- **Paramètres** : Cliquez sur "Paramètres" pour ajuster les options de l'application.
-- **Import/Export de JSON** : Utilisez la fonctionnalité pour sauvegarder vos listes ou les importer dans l'application.
-
 ## Hébergement
 
 Le projet peut être exécuté localement ou est disponible en ligne à l'adresse suivante : [todo-eat](https://alexandrerocchi.github.io/todo-eat/).
