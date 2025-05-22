@@ -7,10 +7,17 @@ export interface GroceryItem {
   category?: string;
 }
 
+export interface TemplateItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
 export interface Template {
   id: string;
   name: string;
-  items: GroceryItem[];
+  items: (string | TemplateItem)[];
   createdAt: string;
 }
 
@@ -32,6 +39,6 @@ export interface Recipe {
 
 export interface ShoppingList {
   id: string;
-  items: GroceryItem[];
+  items: string[];
   createdAt: string;
 }

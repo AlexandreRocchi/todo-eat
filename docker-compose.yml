@@ -1,4 +1,38 @@
 services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: todoeat-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    environment:
+      - VITE_API_URL=http://localhost:4001
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: todoeat-api
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    depends_on:
+      - mariadb
+    environment:
+      - DB_HOST=mariadb
+      - DB_USER=maria-admin
+      - DB_PASSWORD=ffzaf1f545424H4IOUfybdzééjérfg5445
+      - DB_NAME=bdd
+      - PORT=4001
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+    command: sh -c "/wait-for-it.sh mariadb && npm run init-db && npm start"
+
   mariadb:
     image: mariadb:latest
     container_name: mariadb-todo-eat
@@ -12,6 +46,7 @@ services:
       - "3306:3306"
     volumes:
       - todo-eat_data:/var/lib/mysql
+      - ./db/dump.sql:/docker-entrypoint-initdb.d/dump.sql:ro
 
 volumes:
   todo-eat_data:
