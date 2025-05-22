@@ -1,0 +1,17 @@
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb-todo-eat
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ffzaf1f545424H4IOUfybdzééjérfg5445zdzd
+      MYSQL_DATABASE: bdd
+      MYSQL_USER: maria-admin
+      MYSQL_PASSWORD: ffzaf1f545424H4IOUfybdzééjérfg5445
+    ports:
+      - "3306:3306"
+    volumes:
+      - todo-eat_data:/var/lib/mysql
+
+volumes:
+  todo-eat_data:
