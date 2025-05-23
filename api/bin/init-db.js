@@ -2,11 +2,11 @@ const mysql = require('mysql2');
 const fs = require('fs');
 const path = require('path');
 
-// Configurer la connexion
-const connection = mysql.createConnection({
+// Configurer la connexion (utiliser let au lieu de const pour permettre la réassignation)
+let connection = mysql.createConnection({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'maria-admin',
-  password: process.env.DB_PASSWORD || 'ffzaf1f545424H4IOUfybdzééjérfg5445',
+  password: process.env.DB_PASSWORD || 'todoeat123',
   database: process.env.DB_NAME || 'bdd',
   multipleStatements: true // Important pour exécuter plusieurs requêtes à la fois
 });
@@ -41,7 +41,7 @@ function waitForDatabase(retries = 30, interval = 2000) {
           connection = mysql.createConnection({
             host: process.env.DB_HOST || 'localhost',
             user: process.env.DB_USER || 'maria-admin',
-            password: process.env.DB_PASSWORD || 'ffzaf1f545424H4IOUfybdzééjérfg5445',
+            password: process.env.DB_PASSWORD || 'todoeat123',
             database: process.env.DB_NAME || 'bdd',
             multipleStatements: true
           });
@@ -60,7 +60,7 @@ async function initDatabase() {
     await waitForDatabase();
     
     // Lire le fichier SQL
-    const sqlFilePath = path.join(__dirname, '../../db/dump.sql');
+    const sqlFilePath = '/db/dump.sql';
     const sql = fs.readFileSync(sqlFilePath, 'utf8');
     
     console.log('Exécution du script SQL...');

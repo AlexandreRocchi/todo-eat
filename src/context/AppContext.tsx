@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { GroceryItem, Template, Recipe, ShoppingList } from '../types';
 import * as api from '../utils/api';
-import { generateId } from '../utils/helpers';
+import { generateId, mergeItems } from '../utils/helpers';
 
 interface AppContextType {
   // Current shopping list
@@ -24,6 +24,7 @@ interface AppContextType {
   updateRecipe: (recipe: Recipe) => void;
   deleteRecipe: (id: string) => void;
   addIngredientsToList: (recipeId: string) => void;
+  addRecipeToList: (recipeId: string) => void;
   
   // History
   history: ShoppingList[];
@@ -115,13 +116,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loadTemplate = async (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
-    if (template) {
-      // Récupère les items depuis l'API
+    if (!template) {
+      console.error('Template non trouvé:', templateId);
+      return;
+    }
+
+    console.log('Chargement du template:', template);
+    
+    // D'abord vider la liste actuelle sans supprimer les items de la DB
+    setCurrentList([]);
+    
+    // Si le template contient déjà les objets items complets (depuis l'API)
+    if (template.items.length > 0 && typeof template.items[0] === 'object') {
+      // Les items sont déjà des objets complets, on les utilise directement
+      const templateItems = template.items as any[];
+      console.log('Items du template (objets complets):', templateItems);
+      
+      // Fusionner les éléments identiques AVANT de les créer en DB
+      const mergedTemplateItems = mergeItems(templateItems);
+      console.log('Items fusionnés avant création:', mergedTemplateItems);
+      
+      // Créer de nouveaux items dans la DB pour la liste actuelle
+      const newItems = mergedTemplateItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        checked: false
+      }));
+      
+      console.log('Nouveaux items à créer:', newItems);
+      
+      // Ajouter les nouveaux items
+      const addedItems = await Promise.all(newItems.map(api.addGroceryItem));
+      console.log('Items ajoutés:', addedItems);
+      setCurrentList(addedItems);
+    } else {
+      // Fallback: si les items sont juste des IDs, récupérer depuis l'API
       const itemIds = template.items.map(item => typeof item === 'string' ? item : item.id);
-      const items = await Promise.all(itemIds.map(id => 
-        api.getGroceryItems().then(list => list.find((i: any) => i.id === id))
-      ));
-      setCurrentList(items.filter(Boolean));
+      console.log('IDs des items à récupérer:', itemIds);
+      
+      const allItems = await api.getGroceryItems();
+      const items = itemIds.map(id => allItems.find((item: any) => item.id === id)).filter(Boolean);
+      
+      console.log('Items récupérés:', items);
+      
+      // Fusionner les éléments identiques
+      const mergedItems = mergeItems(items);
+      console.log('Items fusionnés:', mergedItems);
+      
+      // Créer de nouveaux items avec les données du template
+      const newItems = mergedItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        checked: false
+      }));
+      
+      // Ajouter les nouveaux items
+      const addedItems = await Promise.all(newItems.map(api.addGroceryItem));
+      setCurrentList(addedItems);
     }
   };
 
@@ -172,14 +225,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addIngredientsToList = async (recipeId: string) => {
     const recipe = recipes.find(r => r.id === recipeId);
     if (!recipe) return;
+    
+    // Créer les nouveaux items à partir des ingrédients
     const items = recipe.ingredients.map(ingredient => ({
       name: ingredient.name,
       quantity: ingredient.quantity,
       unit: ingredient.unit,
       checked: false
     }));
-    const added = await Promise.all(items.map(api.addGroceryItem));
-    setCurrentList(prev => [...prev, ...added]);
+    
+    // Filtrer les doublons en comparant par nom
+    const existingNames = currentList.map(item => item.name.toLowerCase());
+    const newItems = items.filter(item => 
+      !existingNames.includes(item.name.toLowerCase())
+    );
+    
+    // Ajouter seulement les nouveaux items
+    if (newItems.length > 0) {
+      const added = await Promise.all(newItems.map(api.addGroceryItem));
+      setCurrentList(prev => [...prev, ...added]);
+    }
   };
 
   // History functions (shopping lists)
@@ -210,12 +275,107 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Ajout : fonction pour ajouter un template à la liste existante
   const addTemplateToList = async (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
-    if (template) {
+    if (!template) {
+      console.error('Template non trouvé:', templateId);
+      return;
+    }
+
+    console.log('Ajout du template à la liste:', template);
+    
+    // Si le template contient déjà les objets items complets (depuis l'API)
+    if (template.items.length > 0 && typeof template.items[0] === 'object') {
+      // Les items sont déjà des objets complets, on les utilise directement
+      const templateItems = template.items as any[];
+      console.log('Items du template (objets complets):', templateItems);
+      
+      // Fusionner les éléments identiques du template
+      const mergedTemplateItems = mergeItems(templateItems);
+      console.log('Items du template fusionnés:', mergedTemplateItems);
+      
+      // Créer de nouveaux items dans la DB pour les ajouter à la liste actuelle
+      const newItems = mergedTemplateItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        checked: false
+      }));
+      
+      // Au lieu de simplement filtrer par nom, on va fusionner intelligemment
+      // avec les éléments existants qui ont le même nom+unité
+      const itemsToAdd: typeof newItems = [];
+      const existingItemsMap = new Map(
+        currentList.map(item => [`${item.name.trim().toLowerCase()}|${item.unit.trim().toLowerCase()}`, item])
+      );
+      
+      for (const newItem of newItems) {
+        const key = `${newItem.name.trim().toLowerCase()}|${newItem.unit.trim().toLowerCase()}`;
+        const existingItem = existingItemsMap.get(key);
+        
+        if (existingItem) {
+          // Si l'item existe déjà, on met à jour sa quantité
+          const updatedItem = { ...existingItem, quantity: existingItem.quantity + newItem.quantity };
+          await api.updateGroceryItem(existingItem.id, updatedItem);
+          // Mettre à jour localement
+          setCurrentList(prev => prev.map(item => 
+            item.id === existingItem.id ? updatedItem : item
+          ));
+        } else {
+          // Si l'item n'existe pas, on l'ajoute à la liste des nouveaux
+          itemsToAdd.push(newItem);
+        }
+      }
+      
+      if (itemsToAdd.length > 0) {
+        console.log('Nouveaux items uniques à ajouter:', itemsToAdd);
+        const addedItems = await Promise.all(itemsToAdd.map(api.addGroceryItem));
+        console.log('Items ajoutés:', addedItems);
+        setCurrentList(prev => [...prev, ...addedItems]);
+      }
+    } else {
+      // Fallback: si les items sont juste des IDs, récupérer depuis l'API
       const itemIds = template.items.map(item => typeof item === 'string' ? item : item.id);
-      const items = await Promise.all(itemIds.map(id => 
-        api.getGroceryItems().then(list => list.find((i: any) => i.id === id))
-      ));
-      setCurrentList(prev => [...prev, ...items.filter(Boolean)]);
+      console.log('IDs des items à récupérer:', itemIds);
+      
+      const allItems = await api.getGroceryItems();
+      const items = itemIds.map(id => allItems.find((item: any) => item.id === id)).filter(Boolean);
+      
+      // Fusionner les éléments identiques du template
+      const mergedItems = mergeItems(items);
+      console.log('Items fusionnés:', mergedItems);
+      
+      // Même logique de fusion intelligente que ci-dessus
+      const itemsToAdd: any[] = [];
+      const existingItemsMap = new Map(
+        currentList.map(item => [`${item.name.trim().toLowerCase()}|${item.unit.trim().toLowerCase()}`, item])
+      );
+      
+      for (const item of mergedItems) {
+        const key = `${item.name.trim().toLowerCase()}|${item.unit.trim().toLowerCase()}`;
+        const existingItem = existingItemsMap.get(key);
+        
+        if (existingItem) {
+          // Si l'item existe déjà, on met à jour sa quantité
+          const updatedItem = { ...existingItem, quantity: existingItem.quantity + item.quantity };
+          await api.updateGroceryItem(existingItem.id, updatedItem);
+          // Mettre à jour localement
+          setCurrentList(prev => prev.map(listItem => 
+            listItem.id === existingItem.id ? updatedItem : listItem
+          ));
+        } else {
+          // Si l'item n'existe pas, on l'ajoute à la liste des nouveaux
+          itemsToAdd.push({
+            name: item.name,
+            quantity: item.quantity,
+            unit: item.unit,
+            checked: false
+          });
+        }
+      }
+      
+      if (itemsToAdd.length > 0) {
+        const addedItems = await Promise.all(itemsToAdd.map(api.addGroceryItem));
+        setCurrentList(prev => [...prev, ...addedItems]);
+      }
     }
   };
 
@@ -239,6 +399,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateRecipe,
     deleteRecipe,
     addIngredientsToList,
+    addRecipeToList: addIngredientsToList,
     history,
     saveCurrentListToHistory,
     loadFromHistory

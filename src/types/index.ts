@@ -31,9 +31,12 @@ export interface Ingredient {
 export interface Recipe {
   id: string;
   name: string;
+  description?: string;
   ingredients: Ingredient[];
   instructions?: string;
   image?: string;
+  servings?: number;
+  cookingTime?: string;
   createdAt: string;
 }
 

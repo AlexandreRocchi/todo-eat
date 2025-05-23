@@ -3,50 +3,86 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:4001
+        - VITE_AUTH_PASSWORD=${VITE_AUTH_PASSWORD:-test123}
     container_name: todoeat-frontend
-    restart: unless-stopped
+    restart: always
     ports:
-      - "5173:5173"
+      - "5173:80"
     depends_on:
       - api
     environment:
       - VITE_API_URL=http://localhost:4001
+      - VITE_AUTH_PASSWORD=${VITE_AUTH_PASSWORD:-test123}
+    networks:
+      - todoeat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   api:
     build:
       context: ./api
       dockerfile: Dockerfile
     container_name: todoeat-api
-    restart: unless-stopped
+    restart: always
     ports:
       - "4001:4001"
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
     environment:
       - DB_HOST=mariadb
       - DB_USER=maria-admin
-      - DB_PASSWORD=ffzaf1f545424H4IOUfybdzééjérfg5445
+      - DB_PASSWORD=${DB_PASSWORD:-todoeat123}
       - DB_NAME=bdd
       - PORT=4001
+      - NODE_ENV=production
     volumes:
       - ./api:/app
       - /app/node_modules
-    command: sh -c "/wait-for-it.sh mariadb && npm run init-db && npm start"
+      - ./db:/db:ro
+    networks:
+      - todoeat-network
+    command: sh -c "while ! nc -z mariadb 3306; do echo 'Attente de MariaDB...'; sleep 2; done && npm run init-db && npm start"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   mariadb:
-    image: mariadb:latest
+    image: mariadb:11.1
     container_name: mariadb-todo-eat
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ffzaf1f545424H4IOUfybdzééjérfg5445zdzd
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
       MYSQL_DATABASE: bdd
       MYSQL_USER: maria-admin
-      MYSQL_PASSWORD: ffzaf1f545424H4IOUfybdzééjérfg5445
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-todoeat123}
     ports:
       - "3306:3306"
     volumes:
       - todo-eat_data:/var/lib/mysql
       - ./db/dump.sql:/docker-entrypoint-initdb.d/dump.sql:ro
+    networks:
+      - todoeat-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 volumes:
   todo-eat_data:
+    driver: local
+
+networks:
+  todoeat-network:
+    driver: bridge

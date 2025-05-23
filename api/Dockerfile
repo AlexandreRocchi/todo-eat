@@ -3,7 +3,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Installation des dépendances système
-RUN apk add --no-cache mysql-client
+RUN apk add --no-cache mysql-client netcat-openbsd
 
 # Copie des fichiers de dépendances
 COPY package*.json ./
@@ -16,10 +16,6 @@ COPY . .
 
 # Exposition du port 4001
 EXPOSE 4001
-
-# Script d'attente et d'initialisation de la base de données
-COPY ./bin/wait-for-it.sh /wait-for-it.sh
-RUN chmod +x /wait-for-it.sh
 
 # Démarrage de l'API
 CMD ["npm", "start"] 

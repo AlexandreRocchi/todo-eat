@@ -1,6 +1,6 @@
 -- Schéma SQL pour TodoEat (MariaDB)
 
-CREATE TABLE grocery_items (
+CREATE TABLE IF NOT EXISTS grocery_items (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     quantity DOUBLE NOT NULL,
@@ -9,13 +9,13 @@ CREATE TABLE grocery_items (
     category VARCHAR(100)
 );
 
-CREATE TABLE templates (
+CREATE TABLE IF NOT EXISTS templates (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     created_at DATETIME NOT NULL
 );
 
-CREATE TABLE template_items (
+CREATE TABLE IF NOT EXISTS template_items (
     template_id VARCHAR(36) NOT NULL,
     item_id VARCHAR(36) NOT NULL,
     PRIMARY KEY (template_id, item_id),
@@ -23,7 +23,7 @@ CREATE TABLE template_items (
     FOREIGN KEY (item_id) REFERENCES grocery_items(id) ON DELETE CASCADE
 );
 
-CREATE TABLE recipes (
+CREATE TABLE IF NOT EXISTS recipes (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     instructions TEXT,
@@ -31,7 +31,7 @@ CREATE TABLE recipes (
     created_at DATETIME NOT NULL
 );
 
-CREATE TABLE ingredients (
+CREATE TABLE IF NOT EXISTS ingredients (
     id VARCHAR(36) PRIMARY KEY,
     recipe_id VARCHAR(36) NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -40,12 +40,12 @@ CREATE TABLE ingredients (
     FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
 );
 
-CREATE TABLE shopping_lists (
+CREATE TABLE IF NOT EXISTS shopping_lists (
     id VARCHAR(36) PRIMARY KEY,
     created_at DATETIME NOT NULL
 );
 
-CREATE TABLE shopping_list_items (
+CREATE TABLE IF NOT EXISTS shopping_list_items (
     shopping_list_id VARCHAR(36) NOT NULL,
     item_id VARCHAR(36) NOT NULL,
     PRIMARY KEY (shopping_list_id, item_id),

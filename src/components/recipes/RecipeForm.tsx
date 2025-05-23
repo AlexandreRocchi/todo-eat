@@ -18,11 +18,14 @@ const RecipeForm: React.FC<RecipeFormProps> = ({
   onCancel,
 }) => {
   const [name, setName] = useState(initialData?.name || '');
+  const [description, setDescription] = useState(initialData?.description || '');
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     initialData?.ingredients || []
   );
   const [instructions, setInstructions] = useState(initialData?.instructions || '');
   const [image, setImage] = useState(initialData?.image || '');
+  const [servings, setServings] = useState(initialData?.servings || 4);
+  const [cookingTime, setCookingTime] = useState(initialData?.cookingTime || '');
   
   const [newIngredient, setNewIngredient] = useState<Ingredient>({
     id: '',
@@ -84,9 +87,12 @@ const RecipeForm: React.FC<RecipeFormProps> = ({
     
     onSave({
       name: name.trim(),
+      description: description.trim(),
       ingredients,
       instructions: instructions.trim(),
       image: image.trim(),
+      servings: servings > 0 ? servings : undefined,
+      cookingTime: cookingTime.trim() || undefined,
     });
   };
 
@@ -105,6 +111,37 @@ const RecipeForm: React.FC<RecipeFormProps> = ({
           placeholder="Ex: Poulet rôti aux herbes"
           fullWidth
           error={errors.name}
+        />
+      </div>
+      
+      <div>
+        <Input
+          label="Description (optionnel)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Ex: Un plat savoureux parfait pour le dimanche..."
+          fullWidth
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
+          label="Nombre de personnes"
+          type="number"
+          min="1"
+          step="1"
+          value={servings}
+          onChange={(e) => setServings(parseInt(e.target.value) || 4)}
+          placeholder="4"
+          fullWidth
+        />
+        
+        <Input
+          label="Temps de cuisson (optionnel)"
+          value={cookingTime}
+          onChange={(e) => setCookingTime(e.target.value)}
+          placeholder="Ex: 45 min, 1h30..."
+          fullWidth
         />
       </div>
       

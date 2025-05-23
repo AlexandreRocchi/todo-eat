@@ -9,11 +9,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const CORRECT_PASSWORD = 'lescarottessontcuites';
+const CORRECT_PASSWORD = import.meta.env.VITE_AUTH_PASSWORD || 'lescarottessontcuite';
 const AUTH_COOKIE_NAME = 'todoeat_auth';
 const AUTH_COOKIE_EXPIRY = 30; // jours
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false);
 
