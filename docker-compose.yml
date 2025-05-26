@@ -7,34 +7,34 @@ services:
         - VITE_API_URL=http://localhost:4001
         - VITE_AUTH_PASSWORD=${VITE_AUTH_PASSWORD:-test123}
     container_name: todoeat-frontend
-    restart: always
+    restart: unless-stopped
     ports:
       - "5173:80"
     depends_on:
       - api
+      - mariadb
     environment:
       - VITE_API_URL=http://localhost:4001
       - VITE_AUTH_PASSWORD=${VITE_AUTH_PASSWORD:-test123}
     networks:
       - todoeat-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health", "||", "exit", "1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
   api:
     build:
       context: ./api
       dockerfile: Dockerfile
     container_name: todoeat-api
-    restart: always
+    restart: unless-stopped
     ports:
       - "4001:4001"
     depends_on:
-      mariadb:
-        condition: service_healthy
+      - mariadb
     environment:
       - DB_HOST=mariadb
       - DB_USER=maria-admin
@@ -48,13 +48,13 @@ services:
       - ./db:/db:ro
     networks:
       - todoeat-network
-    command: sh -c "while ! nc -z mariadb 3306; do echo 'Attente de MariaDB...'; sleep 2; done && npm run init-db && npm start"
+    command: sh -c "echo 'Attente de MariaDB...' && while ! nc -z mariadb 3306; do sleep 5; done && echo 'MariaDB prêt, initialisation...' && npm run init-db && echo Démarrage_API && npm start"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4001/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4001/health", "||", "exit", "1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 90s
 
   mariadb:
     image: mariadb:11.1
@@ -76,8 +76,8 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 60s
 
 volumes:
   todo-eat_data:
